@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <!DOCTYPE html>
+<html>
+<head>
+    <title>WebGIS của tôi</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: 600px; width: 100%; }
+    </style>
+</head>
+<body>
+    <h2>Bản đồ WebGIS kết nối GeoServer</h2>
+    <div id="map"></div>
+
+    <script>
+        // 1. Khởi tạo bản đồ
+        var map = L.map('map').setView([13.875, 109.1275], 15); // Tọa độ trung tâm
+
+        // 2. Thêm bản đồ nền (OSM)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        // 3. Gọi dữ liệu từ GeoServer qua chuẩn WMS
+        var wmsLayer = L.tileLayer.wms("https://hormone-dragon-verde-solely.trycloudflare.com/geoserver/wms", {
+            layers: 'thanhhoa:cong_trinh,thanhhoa:diem_gnn,thanhhoa:diem_gnn1,thanhhoa:kc,thanhhoa:khu_tuoi',
+            format: 'image/png',
+            transparent: true,
+            attribution: "Dữ liệu từ GeoServer"
+        }).addTo(map);
+        map.on('click', function (e) {
+    // 1. Lấy tọa độ điểm click
+    var pos = e.latlng;
+    var containerPoint = map.latLngToContainerPoint(pos);
+    var size = map.getSize();
+
+    // 2. Tạo URL truy vấn GetFeatureInfo từ GeoServer
+    var url = "http://localhost:8080/geoserver/thanhhoa/wms" + 
+              "?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetFeatureInfo" +
+              "&LAYERS=thanhhoa:kc" + // Thay bằng tên layer của bạn
+              "&QUERY_LAYERS=thanhhoa:kc" +
+              "&BBOX=" + map.getBounds().toBBoxString() +
+              "&FEATURE_COUNT=1" +
+              "&HEIGHT=" + size.y +
+              "&WIDTH=" + size.x +
+              "&FORMAT=image/png" +
+              "&INFO_FORMAT=application/json" + // Yêu cầu trả về dạng JSON để dễ xử lý
+              "&SRS=EPSG:4326" +
+              "&X=" + Math.round(containerPoint.x) +
+              "&Y=" + Math.round(containerPoint.y);
+
+    // 3. Dùng Fetch API để lấy dữ liệu và hiển thị Pop-up
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+   if (data.features && data.features.length > 0) {
+    var props = data.features[0].properties;
+    var popup = L.popup();
+    // QUAN TRỌNG: Kiểm tra xem tên cột trong Postgres là 'Name' hay 'name'
+    // Trong ảnh của bạn là 'Name' (viết hoa chữ N)
+    var tenKenh = props.Name || props.name || "Không có tên";
+    var chieuDai = props.dai || "---";
+    var mcngang = props.mcngang || "---";
+    var namXD = props.namxd || "---";
+
+    var content = "<div style='min-width: 180px;'>" +
+        "<b style='color: blue;'>Thông tin chi tiết:</b><br><hr style='margin:5px 0'>" +
+        "<b>Tên:</b> " + tenKenh + "<br>" +
+        "<b>Chiều dài:</b> " + chieuDai + "<br>" +
+        "<b>mcngang:</b> " + mcngang + "<br>" +
+        "<b>Năm XD:</b> " + namXD +
+        "</div>";
+
+    popup.setLatLng(pos)
+         .setContent(content)
+         .openOn(map);
+}
+        })
+        .catch(err => console.error("Lỗi truy vấn:", err));
+});
+    </script>
+</body>
+</html>
+</body>
+</html>
