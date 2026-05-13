@@ -28,7 +28,7 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
         // 3. Gọi dữ liệu từ GeoServer qua chuẩn WMS
-        var wmsLayer = L.tileLayer.wms("https://hormone-dragon-verde-solely.trycloudflare.com/geoserver/wms", {
+        var wmsLayer = L.tileLayer.wms("https://gisthuyloibinhdinh.loca.lt/geoserver/wms", {
             layers: 'thanhhoa:cong_trinh,thanhhoa:diem_gnn,thanhhoa:diem_gnn1,thanhhoa:kc,thanhhoa:khu_tuoi',
             format: 'image/png',
             transparent: true,
