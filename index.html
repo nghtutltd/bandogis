@@ -1,91 +1,106 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <!DOCTYPE html>
-<html>
-<head>
-    <title>WebGIS của tôi</title>
+    <title>WebGIS GeoServer</title>
+
+    <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <style>
-        #map { height: 600px; width: 100%; }
+        body { margin: 0; font-family: Arial; }
+        h2 { padding: 10px; margin: 0; background: #f0f0f0; }
+        #map { height: calc(100vh - 50px); }
     </style>
 </head>
+
 <body>
-    <h2>Bản đồ WebGIS kết nối GeoServer</h2>
+    <h2>🌍 WebGIS thủy lợi Bình Định</h2>
     <div id="map"></div>
 
-    <script>
-        // 1. Khởi tạo bản đồ
-        var map = L.map('map').setView([13.875, 109.1275], 15); // Tọa độ trung tâm
+<script>
+/* =============================
+   🔥 CHỈ CẦN SỬA CHỖ NÀY KHI ĐỔI LINK
+============================= */
+const GEOSERVER_URL = "https://experiences-clean-sides-sort.trycloudflare.com/geoserver";
+const WORKSPACE = "thanhhoa";
+const LAYER_NAME = "kc"; // layer dùng để click
 
-        // 2. Thêm bản đồ nền (OSM)
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+/* =============================
+   1. Khởi tạo bản đồ
+============================= */
+var map = L.map('map').setView([13.875, 109.1275], 15);
 
-        // 3. Gọi dữ liệu từ GeoServer qua chuẩn WMS
-        var wmsLayer = L.tileLayer.wms("https://gisthuyloibinhdinh.loca.lt/geoserver/wms", {
-            layers: 'thanhhoa:cong_trinh,thanhhoa:diem_gnn,thanhhoa:diem_gnn1,thanhhoa:kc,thanhhoa:khu_tuoi',
-            format: 'image/png',
-            transparent: true,
-            attribution: "Dữ liệu từ GeoServer"
-        }).addTo(map);
-        map.on('click', function (e) {
-    // 1. Lấy tọa độ điểm click
-    var pos = e.latlng;
-    var containerPoint = map.latLngToContainerPoint(pos);
+/* =============================
+   2. Base map
+============================= */
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+}).addTo(map);
+
+/* =============================
+   3. WMS layer từ GeoServer
+============================= */
+var wmsLayer = L.tileLayer.wms(GEOSERVER_URL + "/wms", {
+    layers: WORKSPACE + ":cong_trinh," +
+            WORKSPACE + ":diem_gnn," +
+            WORKSPACE + ":diem_gnn1," +
+            WORKSPACE + ":kc," +
+            WORKSPACE + ":khu_tuoi",
+    format: 'image/png',
+    transparent: true
+}).addTo(map);
+
+/* =============================
+   4. Click lấy thông tin (GetFeatureInfo)
+============================= */
+map.on('click', function (e) {
+
+    var point = map.latLngToContainerPoint(e.latlng);
     var size = map.getSize();
 
-    // 2. Tạo URL truy vấn GetFeatureInfo từ GeoServer
-    var url = "http://localhost:8080/geoserver/thanhhoa/wms" + 
-              "?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetFeatureInfo" +
-              "&LAYERS=thanhhoa:kc" + // Thay bằng tên layer của bạn
-              "&QUERY_LAYERS=thanhhoa:kc" +
-              "&BBOX=" + map.getBounds().toBBoxString() +
-              "&FEATURE_COUNT=1" +
-              "&HEIGHT=" + size.y +
-              "&WIDTH=" + size.x +
-              "&FORMAT=image/png" +
-              "&INFO_FORMAT=application/json" + // Yêu cầu trả về dạng JSON để dễ xử lý
-              "&SRS=EPSG:4326" +
-              "&X=" + Math.round(containerPoint.x) +
-              "&Y=" + Math.round(containerPoint.y);
+    var url = GEOSERVER_URL + "/wms?" +
+        "SERVICE=WMS&VERSION=1.1.1&REQUEST=GetFeatureInfo" +
+        "&LAYERS=" + WORKSPACE + ":" + LAYER_NAME +
+        "&QUERY_LAYERS=" + WORKSPACE + ":" + LAYER_NAME +
+        "&BBOX=" + map.getBounds().toBBoxString() +
+        "&FEATURE_COUNT=1" +
+        "&HEIGHT=" + size.y +
+        "&WIDTH=" + size.x +
+        "&FORMAT=image/png" +
+        "&INFO_FORMAT=application/json" +
+        "&SRS=EPSG:4326" +
+        "&X=" + Math.round(point.x) +
+        "&Y=" + Math.round(point.y);
 
-    // 3. Dùng Fetch API để lấy dữ liệu và hiển thị Pop-up
     fetch(url)
-        .then(response => response.json())
-        .then(data => {
-   if (data.features && data.features.length > 0) {
-    var props = data.features[0].properties;
-    var popup = L.popup();
-    // QUAN TRỌNG: Kiểm tra xem tên cột trong Postgres là 'Name' hay 'name'
-    // Trong ảnh của bạn là 'Name' (viết hoa chữ N)
-    var tenKenh = props.Name || props.name || "Không có tên";
-    var chieuDai = props.dai || "---";
-    var mcngang = props.mcngang || "---";
-    var namXD = props.namxd || "---";
+    .then(res => res.json())
+    .then(data => {
 
-    var content = "<div style='min-width: 180px;'>" +
-        "<b style='color: blue;'>Thông tin chi tiết:</b><br><hr style='margin:5px 0'>" +
-        "<b>Tên:</b> " + tenKenh + "<br>" +
-        "<b>Chiều dài:</b> " + chieuDai + "<br>" +
-        "<b>mcngang:</b> " + mcngang + "<br>" +
-        "<b>Năm XD:</b> " + namXD +
-        "</div>";
+        if (data.features && data.features.length > 0) {
 
-    popup.setLatLng(pos)
-         .setContent(content)
-         .openOn(map);
-}
-        })
-        .catch(err => console.error("Lỗi truy vấn:", err));
+            var p = data.features[0].properties;
+
+            var content = `
+                <div style="min-width:180px">
+                    <b style="color:blue">Thông tin:</b><hr>
+                    <b>Tên:</b> ${p.Name || p.name || "Không có"}<br>
+                    <b>Chiều dài:</b> ${p.dai || "---"}<br>
+                    <b>MC ngang:</b> ${p.mcngang || "---"}<br>
+                    <b>Năm XD:</b> ${p.namxd || "---"}
+                </div>
+            `;
+
+            L.popup()
+                .setLatLng(e.latlng)
+                .setContent(content)
+                .openOn(map);
+        }
+    })
+    .catch(err => console.error("Lỗi:", err));
 });
-    </script>
-</body>
-</html>
+</script>
+
 </body>
 </html>
