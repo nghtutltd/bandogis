@@ -45,7 +45,6 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 var wmsLayer = L.tileLayer.wms(GEOSERVER_URL + "/wms", {
     layers: WORKSPACE + ":cong_trinh," +
             WORKSPACE + ":diem_gnn," +
-            WORKSPACE + ":diem_gnn1," +
             WORKSPACE + ":kc," +
             WORKSPACE + ":khu_tuoi",
     format: 'image/png',
