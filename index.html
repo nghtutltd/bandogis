@@ -35,8 +35,10 @@ var map = L.map('map').setView([13.875, 109.1275], 15);
 /* =============================
    2. Base map
 ============================= */
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap'
+var googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    subdomains:['mt0','mt1','mt2','mt3'],
+    attribution: 'Map data ©2026 Google'
 }).addTo(map);
 
 /* =============================
